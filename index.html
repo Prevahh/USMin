@@ -12,8 +12,9 @@
             left: 10px;
             z-index: 1000;
             background: white;
-            padding: 4px;
+            padding: 6px;
             border-radius: 4px;
+            font-family: sans-serif;
         }
         #loading {
             position: absolute;
@@ -31,9 +32,16 @@
 <body>
     <div id="loading">Loading...</div>
     <div id="controls">
-        <select id="state-select">
-            <option value="">Select a state</option>
-        </select>
+        <div>
+            <select id="state-select">
+                <option value="">Select a state</option>
+            </select>
+        </div>
+        <div style="margin-top:4px;">
+            <label>Radius: <input id="radius-slider" type="range" min="10" max="200" value="50" />
+                <span id="radius-value">50 km</span></label>
+        </div>
+        <div style="font-size:smaller; margin-top:2px;">Click on the map to place a pin</div>
     </div>
     <div id="map"></div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -45,25 +53,78 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
         }).addTo(map);
 
+        const dataLayers = [];
         function loadShapefile(url) {
             fetch(url)
                 .then(res => res.arrayBuffer())
                 .then(buf => shp(buf))
                 .then(geojson => {
-                    L.geoJSON(geojson, {
+                    const layer = L.geoJSON(geojson, {
                         pointToLayer: (feature, latlng) => L.circleMarker(latlng, {radius:3}),
                         onEachFeature: (feature, layer) => {
                             const props = feature.properties || {};
                             const name = props.NAME || props.name || '';
                             if (name) layer.bindPopup(name);
                         }
-                    }).addTo(map);
+                    });
+                    dataLayers.push(layer);
+                    updateVisibility();
                 })
                 .catch(err => console.error('Error loading', err));
         }
         const loading = document.getElementById('loading');
         function showLoading() { loading.style.display = 'block'; }
         function hideLoading() { loading.style.display = 'none'; }
+
+        const radiusSlider = document.getElementById('radius-slider');
+        const radiusValue = document.getElementById('radius-value');
+        let radiusMeters = parseInt(radiusSlider.value, 10) * 1000;
+        let pinMarker = null;
+        let radiusCircle = null;
+
+        function updateCircle() {
+            if (!pinMarker) return;
+            if (!radiusCircle) {
+                radiusCircle = L.circle(pinMarker.getLatLng(), {radius: radiusMeters, color: 'blue', fillOpacity: 0.1}).addTo(map);
+            }
+            radiusCircle.setLatLng(pinMarker.getLatLng());
+            radiusCircle.setRadius(radiusMeters);
+        }
+
+        function updateVisibility() {
+            if (!pinMarker) {
+                dataLayers.forEach(layer => map.removeLayer(layer));
+                return;
+            }
+            const center = pinMarker.getLatLng();
+            dataLayers.forEach(layer => {
+                layer.eachLayer(pt => {
+                    const d = center.distanceTo(pt.getLatLng());
+                    if (d <= radiusMeters) {
+                        if (!map.hasLayer(pt)) map.addLayer(pt);
+                    } else {
+                        if (map.hasLayer(pt)) map.removeLayer(pt);
+                    }
+                });
+            });
+        }
+
+        map.on('click', e => {
+            if (!pinMarker) {
+                pinMarker = L.marker(e.latlng).addTo(map);
+            } else {
+                pinMarker.setLatLng(e.latlng);
+            }
+            updateCircle();
+            updateVisibility();
+        });
+
+        radiusSlider.addEventListener('input', e => {
+            radiusMeters = parseInt(e.target.value, 10) * 1000;
+            radiusValue.textContent = `${e.target.value} km`;
+            updateCircle();
+            updateVisibility();
+        });
 
         const loadedStates = {};
         function loadState(code) {
