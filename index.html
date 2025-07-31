@@ -36,8 +36,13 @@
                 .catch(err => console.error('Error loading', err));
         }
 
-        // Example: load Alaska data. Change the URL to load other states or your own file
-        loadShapefile('https://mrdata.usgs.gov/usmin/state/usmin-AK.zip');
+        // Load data for all 50 states (this may take some time)
+        const stateCodes = [
+            'AK','AL','AR','AZ','CA','CO','CT','DE','FL','GA','HI','IA','ID','IL','IN','KS','KY','LA','MA','MD','ME','MI','MN','MO','MS','MT','NC','ND','NE','NH','NJ','NM','NV','NY','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VA','VT','WA','WI','WV','WY'
+        ];
+        stateCodes.forEach(code => {
+            loadShapefile(`https://mrdata.usgs.gov/usmin/state/usmin-${code}.zip`);
+        });
     </script>
 </body>
 </html>

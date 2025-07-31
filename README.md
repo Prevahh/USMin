@@ -5,7 +5,7 @@ This repository contains a simple web page for viewing mining-related data from 
 ## Usage
 
 1. Open `index.html` in a modern web browser.
-2. The page loads sample data for Alaska directly from the USGS site. To view another state or your own dataset, update the `loadShapefile` call in the script with a different URL or local file path.
+2. The page loads data for all 50 states directly from the USGS site. To use a different dataset, modify the list of state codes or the `loadShapefile` calls in the script.
 
 ## Data sources
 
